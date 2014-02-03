@@ -270,8 +270,7 @@ module Svn2Git
         end
 
         next if branch == 'trunk' || @local.include?(branch)
-        run_command("git branch --track \"#{branch}\" \"remotes/svn/#{branch}\"")
-        run_command("git checkout \"#{branch}\"")
+        run_command("git checkout -b \"#{branch}\" \"remotes/svn/#{branch}\"")        
       end
     end
 
@@ -331,6 +330,7 @@ module Svn2Git
 
     def escape_quotes(str)
       str.gsub("'", "'\\\\''")
+      str.gsub('"', '"\\\\""')
     end
 
   end
