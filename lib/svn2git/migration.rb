@@ -230,6 +230,7 @@ module Svn2Git
 
         original_git_committer_date = ENV['GIT_COMMITTER_DATE']
         ENV['GIT_COMMITTER_DATE'] = escape_quotes(date)
+        run_command("git tag -d \"#{escape_quotes(id)}\"", false)
         run_command("git tag -a -m \"#{escape_quotes(subject)}\" \"#{escape_quotes(id)}\" \"#{escape_quotes(tag)}\"")
         ENV['GIT_COMMITTER_DATE'] = original_git_committer_date
 
