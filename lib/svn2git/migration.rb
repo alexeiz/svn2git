@@ -28,15 +28,14 @@ module Svn2Git
       end
       fix_branches
       fix_tags
-      fix_trunk
       optimize_repos
     end
 
     def parse(args)
       # Set up reasonable defaults for options.
       options = {}
-      options[:verbose] = false
-      options[:metadata] = false
+      options[:verbose] = true
+      options[:metadata] = true
       options[:nominimizeurl] = false
       options[:rootistrunk] = false
       options[:trunk] = 'trunk'
@@ -105,8 +104,8 @@ module Svn2Git
           options[:revision] = revision
         end
 
-        opts.on('-m', '--metadata', 'Include metadata in git logs (git-svn-id)') do
-          options[:metadata] = true
+        opts.on('-m', '--no-metadata', 'Exclude metadata in git logs (git-svn-id)') do
+          options[:metadata] = false
         end
 
         opts.on('--authors AUTHORS_FILE', "Path to file containing svn-to-git authors mapping (default: #{DEFAULT_AUTHORS_FILE})") do |authors|
@@ -119,6 +118,10 @@ module Svn2Git
 
         opts.on('-v', '--verbose', 'Be verbose in logging -- useful for debugging issues') do
           options[:verbose] = true
+        end
+
+        opts.on('-q', '--quiet', 'Be quiet in logging') do
+          options[:verbose] = false
         end
 
         opts.separator ""
@@ -261,28 +264,20 @@ module Svn2Git
       end
 
       svn_branches.each do |branch|
-        branch = branch.gsub(/^svn\//,'').strip
-        if @options[:rebase] && (@local.include?(branch) || branch == 'trunk')
+        # remove phantom svn branches
+        if branch =~ %r{@\d+$}
+            run_command("git branch -r -D \"#{branch}\"")
+            next
+        end
+
+        if @options[:rebase] && @local.include?(branch)
            lbranch = branch
-           lbranch = 'master' if branch == 'trunk'
            run_command("git checkout -f \"#{lbranch}\"")
-           run_command("git rebase \"remotes/svn/#{branch}\"")
+           run_command("git rebase \"remotes/#{branch}\"")
            next
         end
 
-        next if branch == 'trunk' || @local.include?(branch)
-        run_command("git checkout -b \"#{branch}\" \"remotes/svn/#{branch}\"")        
-      end
-    end
-
-    def fix_trunk
-      trunk = @remote.find { |b| b.strip == 'trunk' }
-      if trunk && ! @options[:rebase]
-        run_command("git checkout svn/trunk")
-        run_command("git branch -D master")
-        run_command("git checkout -f -b master")
-      else
-        run_command("git checkout -f master")
+        run_command("git checkout -b \"#{branch}\" \"remotes/#{branch}\"")
       end
     end
 
